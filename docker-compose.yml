@@ -1,0 +1,40 @@
+services:
+  # 1. שרת ה-Spring Boot של מערכת גן החיות
+  app:
+    build: .
+    container_name: zoo-management-app
+    ports:
+      - "9091:9091"
+    environment:
+      # חיבור ישיר ל-PostgreSQL בתוך רשת ה-Docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/zoo_db
+      - SPRING_DATASOURCE_USERNAME=zoo_user
+      - SPRING_DATASOURCE_PASSWORD=zoo_password
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 2. מסד הנתונים PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: zoo-postgres
+    environment:
+      POSTGRES_DB: zoo_db
+      POSTGRES_USER: zoo_user
+      POSTGRES_PASSWORD: zoo_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - zoo_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zoo_user -d zoo_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  zoo_pgdata:

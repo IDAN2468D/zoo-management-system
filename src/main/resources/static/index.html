@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מערכת ניהול חיות גן החיות | Zoo Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="brand">
+                <span class="brand-icon">🦁</span>
+                <div class="brand-title">
+                    <h1>מערכת ניהול חיות גן החיות</h1>
+                    <p>מעקב בריאותי, תזונתי, זיהוי אלקטרוני ושימור מינים בסכנת הכחדה</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-secondary" id="btnRefresh">
+                    <span>🔄</span> רענון
+                </button>
+                <button class="btn btn-primary" id="btnAddAnimal">
+                    <span>➕</span> הוספת חיה חדשה
+                </button>
+            </div>
+        </header>
+
+        <!-- Stats Section -->
+        <section class="stats-grid">
+            <div class="stat-card blue">
+                <div class="stat-header">
+                    <span class="stat-title">סך הכל חיות בגן</span>
+                    <span class="stat-icon">🐾</span>
+                </div>
+                <div class="stat-value" id="statTotalAnimals">-</div>
+                <div class="stat-desc">חברים מכל המינים והמשפחות</div>
+            </div>
+
+            <div class="stat-card rose">
+                <div class="stat-header">
+                    <span class="stat-title">בסכנת הכחדה</span>
+                    <span class="stat-icon">🚨</span>
+                </div>
+                <div class="stat-value" id="statEndangered">-</div>
+                <div class="stat-desc">מינים תחת תוכנית שימור קפדנית</div>
+            </div>
+
+            <div class="stat-card amber">
+                <div class="stat-header">
+                    <span class="stat-title">זקוקות להאכלה</span>
+                    <span class="stat-icon">🥩</span>
+                </div>
+                <div class="stat-value" id="statHungry">-</div>
+                <div class="stat-desc">לא הואכלו מעל 8 שעות</div>
+            </div>
+
+            <div class="stat-card purple">
+                <div class="stat-header">
+                    <span class="stat-title">מעקב רפואי / בידוד</span>
+                    <span class="stat-icon">🩺</span>
+                </div>
+                <div class="stat-value" id="statMedicalAttention">-</div>
+                <div class="stat-desc">בהשגחה, טיפול או בידוד מונע</div>
+            </div>
+
+            <div class="stat-card emerald">
+                <div class="stat-header">
+                    <span class="stat-title">משקל ממוצע</span>
+                    <span class="stat-icon">⚖️</span>
+                </div>
+                <div class="stat-value" id="statAvgWeight">-</div>
+                <div class="stat-desc">גיל ממוצע: <strong id="statAvgAge" style="color:var(--text-primary)">-</strong></div>
+            </div>
+        </section>
+
+        <!-- Toolbar: Search & Filters -->
+        <section class="toolbar">
+            <div class="search-row">
+                <div class="search-input-wrap">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" class="search-input" placeholder="חיפוש חיה לפי שם, תת-מין, שבב אלקטרוני, ארץ מוצא...">
+                </div>
+
+                <select id="healthFilter" class="select-filter">
+                    <option value="">כל המצבים הבריאותיים</option>
+                </select>
+
+                <select id="dietFilter" class="select-filter">
+                    <option value="">כל סוגי התזונה</option>
+                </select>
+
+                <select id="cageFilter" class="select-filter">
+                    <option value="">כל הכלובים</option>
+                </select>
+
+                <label class="filter-toggle-wrap">
+                    <input type="checkbox" id="endangeredToggle">
+                    <span>⚡ רק בסכנת הכחדה</span>
+                </label>
+            </div>
+
+            <!-- Species Pills -->
+            <div class="species-tabs" id="speciesTabs">
+                <!-- Dynamically generated species buttons -->
+            </div>
+        </section>
+
+        <!-- Animals Grid -->
+        <main class="animals-grid" id="animalsGrid">
+            <!-- Dynamically populated animal cards -->
+        </main>
+    </div>
+
+    <!-- Modal: Add / Edit Animal -->
+    <div class="modal-overlay" id="animalModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="animalModalTitle">הוספת חיה חדשה</h2>
+                <button class="modal-close" onclick="closeModal('animalModal')">&times;</button>
+            </div>
+            <form id="animalForm">
+                <input type="hidden" id="modalAnimalId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">שם החיה *</label>
+                        <input type="text" id="modalAnimalName" class="form-input" required placeholder="למשל: סימבה">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">משפחה / מין *</label>
+                        <select id="modalAnimalSpecies" class="form-select" required>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">תת-מין</label>
+                        <select id="modalAnimalSubSpecies" class="form-select">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">מין (זכר/נקבה)</label>
+                        <select id="modalAnimalGender" class="form-select">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">גיל (בשנים)</label>
+                        <input type="number" id="modalAnimalAge" class="form-input" min="0" max="150" placeholder="למשל: 5">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">משקל (ק"ג)</label>
+                        <input type="number" id="modalAnimalWeight" class="form-input" step="0.1" min="0" placeholder="למשל: 180.5">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">סוג תזונה</label>
+                        <select id="modalAnimalDiet" class="form-select">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">מזון מועדף</label>
+                        <input type="text" id="modalAnimalFood" class="form-input" placeholder="למשל: בשר בקר טרי">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ארץ מוצא / סביבה טבעית</label>
+                        <input type="text" id="modalAnimalOrigin" class="form-input" placeholder="למשל: קניה">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">סטטוס שימור (סכנת הכחדה)</label>
+                        <select id="modalAnimalConservation" class="form-select">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">מזהה שבב אלקטרוני (Microchip)</label>
+                        <input type="text" id="modalAnimalChip" class="form-input" placeholder="CHIP-FEL-101">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">כלוב משויך</label>
+                        <select id="modalAnimalCage" class="form-select">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">לוח זמני האכלה</label>
+                        <input type="text" id="modalAnimalSchedule" class="form-input" placeholder="למשל: פעמיים ביום ב-09:00 וב-17:00">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">מצב בריאותי התחלתי</label>
+                        <select id="modalAnimalHealth" class="form-select">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="form-group full">
+                        <label class="form-label">הערות ותיאור אישי</label>
+                        <textarea id="modalAnimalNotes" class="form-textarea" placeholder="מאפיינים ייחודיים, התנהגות..."></textarea>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:12px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('animalModal')">ביטול</button>
+                    <button type="submit" class="btn btn-primary">שמור חיה</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Feed Animal -->
+    <div class="modal-overlay" id="feedModal">
+        <div class="modal-content" style="max-width: 480px;">
+            <div class="modal-header">
+                <h2 id="feedModalTitle">🥩 האכלת חיה</h2>
+                <button class="modal-close" onclick="closeModal('feedModal')">&times;</button>
+            </div>
+            <form id="feedForm">
+                <input type="hidden" id="feedAnimalId">
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label">סוג המזון *</label>
+                    <input type="text" id="feedFoodItem" class="form-input" required placeholder="למשל: נתחי עוף טריים">
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label">כמות (בק"ג) *</label>
+                    <input type="number" id="feedAmountKg" class="form-input" step="0.1" min="0.01" required value="2.5">
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label">שם המטפל המאכיל</label>
+                    <input type="text" id="feedCaretaker" class="form-input" value="מטפל תורן">
+                </div>
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label class="form-label">הערות האכלה</label>
+                    <textarea id="feedNotes" class="form-textarea" placeholder="תיאבון טוב, תגובה חיובית..."></textarea>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:12px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('feedModal')">ביטול</button>
+                    <button type="submit" class="btn btn-emerald">בצע האכלה עכשיו</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Medical Checkup -->
+    <div class="modal-overlay" id="medicalModal">
+        <div class="modal-content" style="max-width: 520px;">
+            <div class="modal-header">
+                <h2 id="medicalModalTitle">🩺 בדיקה רפואית</h2>
+                <button class="modal-close" onclick="closeModal('medicalModal')">&times;</button>
+            </div>
+            <form id="medicalForm">
+                <input type="hidden" id="medAnimalId">
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label">עדכון מצב בריאותי *</label>
+                    <select id="medHealthStatus" class="form-select" required>
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label">אבחנה רפואית *</label>
+                    <input type="text" id="medDiagnosis" class="form-input" required placeholder="בדיקה תקופתית, צליעה ברגל, הצטננות...">
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label">טיפול שניתן / תרופות</label>
+                    <input type="text" id="medTreatment" class="form-input" placeholder="חיסון שנתי, אנטיביוטיקה, מנוחה...">
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label">שם הווטרינר המטפל</label>
+                    <input type="text" id="medDoctor" class="form-input" value='ד"ר שרה מילר'>
+                </div>
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label class="form-label">הערות ומעקב</label>
+                    <textarea id="medNotes" class="form-textarea" placeholder="הנחיות להמשך טיפול..."></textarea>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:12px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('medicalModal')">ביטול</button>
+                    <button type="submit" class="btn btn-amber">שמור בדיקה רפואית</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: History Timeline -->
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="historyModalTitle">📋 היסטוריה</h2>
+                <button class="modal-close" onclick="closeModal('historyModal')">&times;</button>
+            </div>
+            <div class="timeline" id="historyTimeline">
+                <!-- Dynamically populated timeline items -->
+            </div>
+            <div style="display:flex; justify-content:flex-end; margin-top:20px;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('historyModal')">סגור</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

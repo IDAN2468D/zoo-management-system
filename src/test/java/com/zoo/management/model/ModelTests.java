@@ -93,8 +93,41 @@ class ModelTests {
     @DisplayName("Should verify Role and HealthStatus enums")
     void testEnums() {
         assertEquals(2, Role.values().length);
-        assertEquals(3, HealthStatus.values().length);
+        assertEquals(5, HealthStatus.values().length);
         assertNotNull(HealthStatus.valueOf("HEALTHY"));
+        assertNotNull(HealthStatus.valueOf("QUARANTINED"));
         assertNotNull(Role.valueOf("MANAGER"));
+    }
+
+    @Test
+    @DisplayName("Should verify new Animal attributes, feeding and medical records")
+    void testEnhancedAnimalAttributes() {
+        Animal lion = new Animal();
+        lion.setName("Simba");
+        lion.setSpecies(Species.FELINE);
+        lion.setSubSpecies(SubSpecies.LION);
+        lion.setGender(Gender.MALE);
+        lion.setAge(6);
+        lion.setWeightKg(190.5);
+        lion.setDietType(DietType.CARNIVORE);
+        lion.setConservationStatus(ConservationStatus.VULNERABLE);
+        lion.setMicrochipId("CHIP-12345");
+
+        assertTrue(lion.isEndangered());
+        assertEquals("זכר", lion.getGender().getHebrewName());
+        assertEquals("טורף", lion.getDietType().getHebrewName());
+
+        // Feeding test
+        FeedingRecord feeding = new FeedingRecord("Meat", 5.0, "Maya", "Lunch");
+        lion.addFeedingRecord(feeding);
+        assertNotNull(lion.getLastFedTime());
+        assertEquals(1, lion.getFeedingHistory().size());
+        assertFalse(lion.isNeedsFeeding(2));
+
+        // Medical test
+        MedicalRecord med = new MedicalRecord(1L, HealthStatus.UNDER_OBSERVATION, "Checkup", "Vitamins", "Dr. Sarah", "All good");
+        lion.addMedicalRecord(med);
+        assertEquals(HealthStatus.UNDER_OBSERVATION, lion.getHealthStatus());
+        assertEquals(1, lion.getMedicalHistory().size());
     }
 }

@@ -16,27 +16,12 @@ public class Employee {
     public Employee(String name, Role role) {
         this.name = name;
         this.role = role;
-        this.assignedCages = new ArrayList<>();
     }
 
     public Employee(Long id, String name, Role role) {
         this.id = id;
         this.name = name;
         this.role = role;
-        this.assignedCages = new ArrayList<>();
-    }
-
-    public Employee(String name, Role role, List<Cage> assignedCages) {
-        this.name = name;
-        this.role = role;
-        this.assignedCages = assignedCages != null ? assignedCages : new ArrayList<>();
-    }
-
-    public Employee(Long id, String name, Role role, List<Cage> assignedCages) {
-        this.id = id;
-        this.name = name;
-        this.role = role;
-        this.assignedCages = assignedCages != null ? assignedCages : new ArrayList<>();
     }
 
     public Long getId() {
