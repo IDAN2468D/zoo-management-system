@@ -65,22 +65,12 @@ public class ZooDataInitializer implements CommandLineRunner {
 
         // 2. אתחול נתוני חיות וכלובים
         if (cageRepository.count() > 0) {
-            log.info("מסד הנתונים כבר מכיל כלובים - מעדכן תמונות NaNoBanana 2.1 עבור חיות קיימות במידת הצורך...");
+            log.info("מסד הנתונים כבר מכיל כלובים - מעדכן תמונות עבור כל 20 החיות במידת הצורך...");
             for (Animal a : animalRepository.findAll()) {
-                if (a.getImageUrl() == null || a.getImageUrl().isEmpty()) {
-                    String img = null;
-                    if ("Simba".equals(a.getName()) || "Nala".equals(a.getName())) img = "images/simba.jpg";
-                    else if ("Shere Khan".equals(a.getName())) img = "images/shere_khan.jpg";
-                    else if ("Dumbo".equals(a.getName())) img = "images/dumbo.jpg";
-                    else if ("Po".equals(a.getName())) img = "images/po.jpg";
-                    else if ("Flipper".equals(a.getName())) img = "images/flipper.jpg";
-                    else if ("Pingu".equals(a.getName())) img = "images/pingu.jpg";
-                    else if ("Koko".equals(a.getName())) img = "images/koko.jpg";
-                    else if ("Pinky".equals(a.getName())) img = "images/pinky.jpg";
-                    if (img != null) {
-                        a.setImageUrl(img);
-                        animalRepository.save(a);
-                    }
+                String img = resolveAnimalImage(a.getName());
+                if (img != null && (a.getImageUrl() == null || !img.equals(a.getImageUrl()))) {
+                    a.setImageUrl(img);
+                    animalRepository.save(a);
                 }
             }
             return;
@@ -234,16 +224,7 @@ public class ZooDataInitializer implements CommandLineRunner {
         animal.setFeedingSchedule(feedingSchedule);
         animal.setNotes(notes);
 
-        String img = null;
-        if ("Simba".equals(name) || "Nala".equals(name)) img = "images/simba.jpg";
-        else if ("Shere Khan".equals(name)) img = "images/shere_khan.jpg";
-        else if ("Dumbo".equals(name)) img = "images/dumbo.jpg";
-        else if ("Po".equals(name)) img = "images/po.jpg";
-        else if ("Flipper".equals(name)) img = "images/flipper.jpg";
-        else if ("Pingu".equals(name)) img = "images/pingu.jpg";
-        else if ("Koko".equals(name)) img = "images/koko.jpg";
-        else if ("Pinky".equals(name)) img = "images/pinky.jpg";
-        animal.setImageUrl(img);
+        animal.setImageUrl(resolveAnimalImage(name));
 
         LocalDateTime fedTime = LocalDateTime.now().minusHours(hoursAgoFed);
         animal.setLastFedTime(fedTime);
@@ -256,5 +237,29 @@ public class ZooDataInitializer implements CommandLineRunner {
                 "בדיקה תקופתית שנתית", "חיסון שגרתי ותילוע", "ד\"ר שרה מילר", "חיוניות גבוהה ומדדים תקינים"));
 
         animalRepository.save(animal);
+    }
+
+    private String resolveAnimalImage(String name) {
+        if ("Simba".equals(name)) return "images/simba.jpg";
+        if ("Nala".equals(name)) return "images/nala.jpg";
+        if ("Shere Khan".equals(name)) return "images/shere_khan.jpg";
+        if ("Bagheera".equals(name)) return "images/bagheera.jpg";
+        if ("George".equals(name)) return "images/george.jpg";
+        if ("Koko".equals(name)) return "images/koko.jpg";
+        if ("King Julien".equals(name)) return "images/king_julien.jpg";
+        if ("Majestic".equals(name)) return "images/majestic.jpg";
+        if ("Rio".equals(name)) return "images/rio.jpg";
+        if ("Pinky".equals(name)) return "images/pinky.jpg";
+        if ("Pingu".equals(name)) return "images/pingu.jpg";
+        if ("Flipper".equals(name)) return "images/flipper.jpg";
+        if ("Crush".equals(name)) return "images/crush.jpg";
+        if ("Dumbo".equals(name)) return "images/dumbo.jpg";
+        if ("Melman".equals(name)) return "images/melman.jpg";
+        if ("Marty".equals(name)) return "images/marty.jpg";
+        if ("Po".equals(name)) return "images/po.jpg";
+        if ("Kaa".equals(name)) return "images/kaa.jpg";
+        if ("Pascal".equals(name)) return "images/pascal.jpg";
+        if ("Kermit".equals(name)) return "images/kermit.jpg";
+        return null;
     }
 }

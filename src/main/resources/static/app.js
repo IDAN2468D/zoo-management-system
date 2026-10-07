@@ -85,17 +85,28 @@ function getEmoji(animal) {
     return '🐾';
 }
 
-// Preloaded NaNoBanana 2.1 Photorealistic AI Images Map
+// Preloaded Photorealistic Images Map for All 20 Zoo Animals
 const ANIMAL_IMAGE_MAP = {
     'Simba': 'images/simba.jpg',
-    'Nala': 'images/simba.jpg',
+    'Nala': 'images/nala.jpg',
     'Shere Khan': 'images/shere_khan.jpg',
-    'Dumbo': 'images/dumbo.jpg',
-    'Po': 'images/po.jpg',
-    'Flipper': 'images/flipper.jpg',
-    'Pingu': 'images/pingu.jpg',
+    'Bagheera': 'images/bagheera.jpg',
+    'George': 'images/george.jpg',
     'Koko': 'images/koko.jpg',
-    'Pinky': 'images/pinky.jpg'
+    'King Julien': 'images/king_julien.jpg',
+    'Majestic': 'images/majestic.jpg',
+    'Rio': 'images/rio.jpg',
+    'Pinky': 'images/pinky.jpg',
+    'Pingu': 'images/pingu.jpg',
+    'Flipper': 'images/flipper.jpg',
+    'Crush': 'images/crush.jpg',
+    'Dumbo': 'images/dumbo.jpg',
+    'Melman': 'images/melman.jpg',
+    'Marty': 'images/marty.jpg',
+    'Po': 'images/po.jpg',
+    'Kaa': 'images/kaa.jpg',
+    'Pascal': 'images/pascal.jpg',
+    'Kermit': 'images/kermit.jpg'
 };
 
 function getAnimalImage(animal) {

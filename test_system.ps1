@@ -4,8 +4,8 @@ Write-Host "=== 1. HEALTH CHECK ===" -ForegroundColor Cyan
 $health = Invoke-RestMethod -Uri "http://localhost:9091/api/health"
 Write-Host "Health Response: $health" -ForegroundColor Green
 
-Write-Host "`n=== 2. STATIC IMAGES CHECK (NaNoBanana 2.1) ===" -ForegroundColor Cyan
-$images = @('simba.jpg', 'shere_khan.jpg', 'dumbo.jpg', 'po.jpg', 'flipper.jpg', 'pingu.jpg', 'koko.jpg', 'pinky.jpg')
+Write-Host "`n=== 2. STATIC IMAGES CHECK (ALL 20 ANIMALS) ===" -ForegroundColor Cyan
+$images = @('simba.jpg', 'nala.jpg', 'shere_khan.jpg', 'bagheera.jpg', 'george.jpg', 'koko.jpg', 'king_julien.jpg', 'majestic.jpg', 'rio.jpg', 'pinky.jpg', 'pingu.jpg', 'flipper.jpg', 'crush.jpg', 'dumbo.jpg', 'melman.jpg', 'marty.jpg', 'po.jpg', 'kaa.jpg', 'pascal.jpg', 'kermit.jpg')
 foreach ($img in $images) {
     $res = Invoke-WebRequest -Uri ("http://localhost:9091/images/" + $img) -Method Head -UseBasicParsing
     Write-Host "  -> Image $img : HTTP $($res.StatusCode) ($($res.Headers['Content-Type']))" -ForegroundColor Green
