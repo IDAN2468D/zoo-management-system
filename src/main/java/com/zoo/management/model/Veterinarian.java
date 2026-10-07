@@ -1,11 +1,21 @@
 package com.zoo.management.model;
 
+import jakarta.persistence.*;
 import java.util.Objects;
 
+@Entity
+@Table(name = "veterinarians")
 public class Veterinarian {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String name;
+
+    @Enumerated(EnumType.STRING)
     private Species specialization;
+
     private String email;
     private String phone;
 

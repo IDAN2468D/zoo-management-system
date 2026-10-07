@@ -8,9 +8,47 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <script>
+        // Auth Guard: אם המשתמש אינו מחובר, ניתוב מיידי לדף ההתחברות וההרשמה הנפרד
+        (function() {
+            var saved = localStorage.getItem('zoo_auth');
+            if (!saved) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
 </head>
 <body>
     <div class="container">
+        <!-- RBAC Role Selector Bar -->
+        <section class="role-selector-bar" id="roleSelectorBar">
+            <div class="role-selector-title">
+                <span class="role-selector-icon">🛡️</span>
+                <div>
+                    <strong style="color:var(--text-primary); font-size:0.95rem;">בקרת הרשאות ותפקידים (Spring Security 6 RBAC)</strong>
+                    <div style="font-size:0.8rem; color:var(--text-muted);">החלף תפקיד לבדיקת הרשאות בזמן אמת</div>
+                </div>
+            </div>
+            <div class="role-buttons">
+                <button type="button" class="btn-role" data-role="guest" id="role-guest" title="אורח - צפייה בנתונים בלבד">
+                    <span class="role-icon">👤</span> אורח (Guest)
+                </button>
+                <button type="button" class="btn-role" data-role="keeper" id="role-keeper" title="מטפל - מורשה להאכיל ולהעביר כלובים">
+                    <span class="role-icon">🥩</span> מטפל (Keeper)
+                </button>
+                <button type="button" class="btn-role" data-role="vet" id="role-vet" title="וטרינר - מורשה לבדיקות רפואיות ובידוד">
+                    <span class="role-icon">🩺</span> וטרינר (Vet)
+                </button>
+                <button type="button" class="btn-role active" data-role="admin" id="role-admin" title="מנהל - הרשאות מלאות להוספה, עריכה ומחיקה">
+                    <span class="role-icon">👑</span> מנהל (Admin)
+                </button>
+            </div>
+            <div class="current-role-badge" id="currentRoleBadge">
+                <span class="badge-status-dot"></span>
+                <span id="currentRoleLabel">מחובר כ-מנהל (ROLE_ADMIN)</span>
+            </div>
+        </section>
+
         <!-- Header -->
         <header class="app-header">
             <div class="brand">
@@ -21,6 +59,28 @@
                 </div>
             </div>
             <div class="header-actions">
+                <div class="auth-header-controls" id="authUserControls">
+                    <div class="user-greeting-badge" id="userGreetingBadge">
+                        <span class="user-greeting-avatar" id="userGreetingAvatar">👑</span>
+                        <div class="user-greeting-info">
+                            <span class="user-greeting-name" id="userGreetingName">משתמש מחובר</span>
+                            <span class="user-greeting-role" id="userGreetingRole">טוען...</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-rose btn-sm" id="btnLogout" title="התנתק מהמערכת">
+                        <span>🚪</span> התנתק
+                    </button>
+                </div>
+                <button type="button" class="btn-alert-bell" id="btnAlertsBell" title="מרכז התראות בזמן אמת">
+                    <span>🔔</span> התראות
+                    <span class="alert-bell-count" id="alertsBadgeCount" style="display:none;">0</span>
+                </button>
+                <button type="button" class="btn btn-secondary" id="btnExportCsv" title="ייצוא נתוני חיות לקובץ CSV">
+                    <span>📊</span> ייצוא CSV
+                </button>
+                <button type="button" class="btn btn-secondary" id="btnPrintReport" title="הדפסה או ייצוא דוח PDF מעוצב">
+                    <span>🖨️</span> דוח PDF
+                </button>
                 <button class="btn btn-secondary" id="btnRefresh">
                     <span>🔄</span> רענון
                 </button>
@@ -30,91 +90,173 @@
             </div>
         </header>
 
-        <!-- Stats Section -->
-        <section class="stats-grid">
-            <div class="stat-card blue">
-                <div class="stat-header">
-                    <span class="stat-title">סך הכל חיות בגן</span>
-                    <span class="stat-icon">🐾</span>
-                </div>
-                <div class="stat-value" id="statTotalAnimals">-</div>
-                <div class="stat-desc">חברים מכל המינים והמשפחות</div>
-            </div>
+        <!-- Main Navigation Bar -->
+        <nav class="main-nav-bar" id="mainNavBar">
+            <button type="button" class="nav-tab-btn active" data-view="animals" id="tabNavAnimals">
+                <span>🐾</span> חיות הגן (מעקב וניהול)
+            </button>
+            <button type="button" class="nav-tab-btn" data-view="cages" id="tabNavCages">
+                <span>🏡</span> מתחמים וכלובים
+            </button>
+            <button type="button" class="nav-tab-btn" data-view="tasks" id="tabNavTasks">
+                <span>📋</span> משימות וסידור עבודה
+                <span class="nav-sub-badge" id="navTasksBadge" style="display:none;">0</span>
+            </button>
+            <button type="button" class="nav-tab-btn" data-view="analytics" id="tabNavAnalytics">
+                <span>📊</span> דוחות ואנליטיקה
+            </button>
+        </nav>
 
-            <div class="stat-card rose">
-                <div class="stat-header">
-                    <span class="stat-title">בסכנת הכחדה</span>
-                    <span class="stat-icon">🚨</span>
-                </div>
-                <div class="stat-value" id="statEndangered">-</div>
-                <div class="stat-desc">מינים תחת תוכנית שימור קפדנית</div>
-            </div>
-
-            <div class="stat-card amber">
-                <div class="stat-header">
-                    <span class="stat-title">זקוקות להאכלה</span>
-                    <span class="stat-icon">🥩</span>
-                </div>
-                <div class="stat-value" id="statHungry">-</div>
-                <div class="stat-desc">לא הואכלו מעל 8 שעות</div>
-            </div>
-
-            <div class="stat-card purple">
-                <div class="stat-header">
-                    <span class="stat-title">מעקב רפואי / בידוד</span>
-                    <span class="stat-icon">🩺</span>
-                </div>
-                <div class="stat-value" id="statMedicalAttention">-</div>
-                <div class="stat-desc">בהשגחה, טיפול או בידוד מונע</div>
-            </div>
-
-            <div class="stat-card emerald">
-                <div class="stat-header">
-                    <span class="stat-title">משקל ממוצע</span>
-                    <span class="stat-icon">⚖️</span>
-                </div>
-                <div class="stat-value" id="statAvgWeight">-</div>
-                <div class="stat-desc">גיל ממוצע: <strong id="statAvgAge" style="color:var(--text-primary)">-</strong></div>
-            </div>
-        </section>
-
-        <!-- Toolbar: Search & Filters -->
-        <section class="toolbar">
-            <div class="search-row">
-                <div class="search-input-wrap">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" id="searchInput" class="search-input" placeholder="חיפוש חיה לפי שם, תת-מין, שבב אלקטרוני, ארץ מוצא...">
+        <!-- ================= VIEW 1: ANIMALS ================= -->
+        <div id="viewAnimals" class="app-view active">
+            <!-- Stats Section -->
+            <section class="stats-grid">
+                <div class="stat-card blue">
+                    <div class="stat-header">
+                        <span class="stat-title">סך הכל חיות בגן</span>
+                        <span class="stat-icon">🐾</span>
+                    </div>
+                    <div class="stat-value" id="statTotalAnimals">-</div>
+                    <div class="stat-desc">חברים מכל המינים והמשפחות</div>
                 </div>
 
-                <select id="healthFilter" class="select-filter">
-                    <option value="">כל המצבים הבריאותיים</option>
-                </select>
+                <div class="stat-card rose">
+                    <div class="stat-header">
+                        <span class="stat-title">בסכנת הכחדה</span>
+                        <span class="stat-icon">🚨</span>
+                    </div>
+                    <div class="stat-value" id="statEndangered">-</div>
+                    <div class="stat-desc">מינים תחת תוכנית שימור קפדנית</div>
+                </div>
 
-                <select id="dietFilter" class="select-filter">
-                    <option value="">כל סוגי התזונה</option>
-                </select>
+                <div class="stat-card amber">
+                    <div class="stat-header">
+                        <span class="stat-title">זקוקות להאכלה</span>
+                        <span class="stat-icon">🥩</span>
+                    </div>
+                    <div class="stat-value" id="statHungry">-</div>
+                    <div class="stat-desc">לא הואכלו מעל 8 שעות</div>
+                </div>
 
-                <select id="cageFilter" class="select-filter">
-                    <option value="">כל הכלובים</option>
-                </select>
+                <div class="stat-card purple">
+                    <div class="stat-header">
+                        <span class="stat-title">מעקב רפואי / בידוד</span>
+                        <span class="stat-icon">🩺</span>
+                    </div>
+                    <div class="stat-value" id="statMedicalAttention">-</div>
+                    <div class="stat-desc">בהשגחה, טיפול או בידוד מונע</div>
+                </div>
 
-                <label class="filter-toggle-wrap">
-                    <input type="checkbox" id="endangeredToggle">
-                    <span>⚡ רק בסכנת הכחדה</span>
-                </label>
+                <div class="stat-card emerald">
+                    <div class="stat-header">
+                        <span class="stat-title">משקל ממוצע</span>
+                        <span class="stat-icon">⚖️</span>
+                    </div>
+                    <div class="stat-value" id="statAvgWeight">-</div>
+                    <div class="stat-desc">גיל ממוצע: <strong id="statAvgAge" style="color:var(--text-primary)">-</strong></div>
+                </div>
+            </section>
+
+            <!-- Toolbar: Search & Filters -->
+            <section class="toolbar">
+                <div class="search-row">
+                    <div class="search-input-wrap">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="searchInput" class="search-input" placeholder="חיפוש חיה לפי שם, תת-מין, שבב אלקטרוני, ארץ מוצא...">
+                    </div>
+
+                    <select id="healthFilter" class="select-filter">
+                        <option value="">כל המצבים הבריאותיים</option>
+                    </select>
+
+                    <select id="dietFilter" class="select-filter">
+                        <option value="">כל סוגי התזונה</option>
+                    </select>
+
+                    <select id="cageFilter" class="select-filter">
+                        <option value="">כל הכלובים</option>
+                    </select>
+
+                    <label class="filter-toggle-wrap">
+                        <input type="checkbox" id="endangeredToggle">
+                        <span>⚡ רק בסכנת הכחדה</span>
+                    </label>
+                </div>
+
+                <!-- Species Pills -->
+                <div class="species-tabs" id="speciesTabs">
+                    <!-- Dynamically generated species buttons -->
+                </div>
+            </section>
+
+            <!-- Animals Grid -->
+            <main class="animals-grid" id="animalsGrid">
+                <!-- Dynamically populated animal cards -->
+            </main>
+        </div>
+
+        <!-- ================= VIEW 2: CAGES ================= -->
+        <div id="viewCages" class="app-view" style="display:none;">
+            <div class="view-header">
+                <div class="view-header-title">
+                    <h2>🏡 מתחמים וכלובי הגן</h2>
+                    <p>מעקב תפוסה, בקרת אקלים (טמפרטורה ולחות), שיוך חיות ואזורי מחיה</p>
+                </div>
+                <button type="button" class="btn btn-primary" id="btnOpenAddCage">
+                    <span>➕</span> הוספת מתחם / כלוב חדש
+                </button>
+            </div>
+            <div class="cages-grid" id="cagesListGrid">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- ================= VIEW 3: TASKS ================= -->
+        <div id="viewTasks" class="app-view" style="display:none;">
+            <div class="view-header">
+                <div class="view-header-title">
+                    <h2>📋 משימות יומיות וסידור עבודה</h2>
+                    <p>הקצאה ומעקב ביצוע משימות האכלה, בדיקות רפואיות ותחזוקת מתחמים</p>
+                </div>
+                <button type="button" class="btn btn-emerald" id="btnOpenAddTask">
+                    <span>➕</span> משימה חדשה לצוות
+                </button>
             </div>
 
-            <!-- Species Pills -->
-            <div class="species-tabs" id="speciesTabs">
-                <!-- Dynamically generated species buttons -->
+            <!-- Task Status Filters -->
+            <div class="tasks-filter-bar">
+                <button type="button" class="task-filter-btn active" data-task-filter="ALL" onclick="filterTasks('ALL')">הכל</button>
+                <button type="button" class="task-filter-btn" data-task-filter="PENDING" onclick="filterTasks('PENDING')">ממתינות (Pending)</button>
+                <button type="button" class="task-filter-btn" data-task-filter="IN_PROGRESS" onclick="filterTasks('IN_PROGRESS')">בביצוע (In Progress)</button>
+                <button type="button" class="task-filter-btn" data-task-filter="COMPLETED" onclick="filterTasks('COMPLETED')">הושלמו (Completed)</button>
             </div>
-        </section>
 
-        <!-- Animals Grid -->
-        <main class="animals-grid" id="animalsGrid">
-            <!-- Dynamically populated animal cards -->
-        </main>
-    </div>
+            <div class="tasks-grid" id="tasksListGrid">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- ================= VIEW 4: ANALYTICS ================= -->
+        <div id="viewAnalytics" class="app-view" style="display:none;">
+            <div class="view-header">
+                <div class="view-header-title">
+                    <h2>📊 דוחות, התפלגויות ואנליטיקה</h2>
+                    <p>תובנות בזמן אמת על בריאות, תזונה, שימור מינים ותפוסת מתחמים בגן החיות</p>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button type="button" class="btn btn-secondary" onclick="window.print()">
+                        <span>🖨️</span> הדפס דוח
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="loadAnalytics()">
+                        <span>🔄</span> רענון נתונים
+                    </button>
+                </div>
+            </div>
+
+            <div class="analytics-grid" id="analyticsGrid">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
 
     <!-- Modal: Add / Edit Animal -->
     <div class="modal-overlay" id="animalModal">
@@ -208,6 +350,11 @@
                         <select id="modalAnimalHealth" class="form-select">
                             <!-- Populated dynamically -->
                         </select>
+                    </div>
+
+                    <div class="form-group full">
+                        <label class="form-label">קישור לתמונה / נתיב (NaNoBanana 2.1 AI Image)</label>
+                        <input type="text" id="modalAnimalImage" class="form-input" placeholder="למשל: images/simba.jpg או כתובת אינטרנט של תמונה">
                     </div>
 
                     <div class="form-group full">
@@ -309,6 +456,128 @@
             <div style="display:flex; justify-content:flex-end; margin-top:20px;">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('historyModal')">סגור</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Slide-out Drawer: Smart Alerts & Reminders -->
+    <div class="alerts-drawer-overlay" id="alertsDrawerOverlay">
+        <div class="alerts-drawer" id="alertsDrawer">
+            <div class="alerts-drawer-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:1.6rem;">🔔</span>
+                    <div>
+                        <h3 style="font-size:1.15rem; font-weight:800; color:var(--text-primary); margin:0;">מרכז התראות חכמות</h3>
+                        <p style="font-size:0.78rem; color:var(--text-muted); margin:2px 0 0 0;" id="alertsSubtitle">מעקב דחיפויות ותזכורות בזמן אמת</p>
+                    </div>
+                </div>
+                <button class="modal-close" id="btnCloseAlerts">&times;</button>
+            </div>
+            <div class="alerts-drawer-body" id="alertsDrawerList">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add New Task -->
+    <div class="modal-overlay" id="taskModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 id="taskModalTitle">📋 משימה חדשה לצוות</h2>
+                <button class="modal-close" onclick="closeModal('taskModal')">&times;</button>
+            </div>
+            <form id="taskForm">
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label">כותרת המשימה *</label>
+                    <input type="text" id="taskTitle" class="form-input" required placeholder="למשל: האכלת צהריים לטורפים">
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label">תיאור והנחיות לביצוע</label>
+                    <textarea id="taskDesc" class="form-textarea" placeholder="פירוט מנה, דגשים מיוחדים, תרופות..."></textarea>
+                </div>
+                <div class="form-grid" style="margin-bottom:14px;">
+                    <div class="form-group">
+                        <label class="form-label">מיועד לתפקיד *</label>
+                        <select id="taskRole" class="form-select" required>
+                            <option value="KEEPER">מטפל חיות (Keeper)</option>
+                            <option value="VET">רופא וטרינר (Vet)</option>
+                            <option value="ADMIN">מנהל מערכת (Admin)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">שם איש הצוות</label>
+                        <input type="text" id="taskAssignee" class="form-input" placeholder="למשל: מאיה לוי">
+                    </div>
+                </div>
+                <div class="form-grid" style="margin-bottom:14px;">
+                    <div class="form-group">
+                        <label class="form-label">חיה מקושרת (אופציונלי)</label>
+                        <input type="text" id="taskAnimalName" class="form-input" placeholder="למשל: Simba">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">רמת דחיפות *</label>
+                        <select id="taskPriority" class="form-select" required>
+                            <option value="LOW">נמוכה (Low)</option>
+                            <option value="MEDIUM" selected>בינונית (Medium)</option>
+                            <option value="HIGH">גבוהה (High)</option>
+                            <option value="URGENT">דחופה ביותר (Urgent ⚡)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label class="form-label">יעד לסיום / שעת ביצוע</label>
+                    <input type="text" id="taskDueDate" class="form-input" placeholder="למשל: היום עד 14:00, סוף המשמרת">
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:12px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('taskModal')">ביטול</button>
+                    <button type="submit" class="btn btn-emerald">צור משימה</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add New Cage -->
+    <div class="modal-overlay" id="cageModal">
+        <div class="modal-content" style="max-width: 520px;">
+            <div class="modal-header">
+                <h2 id="cageModalTitle">🏡 הוספת מתחם / כלוב חדש</h2>
+                <button class="modal-close" onclick="closeModal('cageModal')">&times;</button>
+            </div>
+            <form id="cageForm">
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label">שם המתחם / הכלוב *</label>
+                    <input type="text" id="cageNameInput" class="form-input" required placeholder="למשל: מתחם סוואנה פתוח D-1">
+                </div>
+                <div class="form-grid" style="margin-bottom:14px;">
+                    <div class="form-group">
+                        <label class="form-label">סוג חיה מיועד (משפחה) *</label>
+                        <select id="cageSpeciesInput" class="form-select" required>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">קיבולת מקסימלית (חיות) *</label>
+                        <input type="number" id="cageCapacityInput" class="form-input" min="1" max="50" required value="6">
+                    </div>
+                </div>
+                <div class="form-grid" style="margin-bottom:14px;">
+                    <div class="form-group">
+                        <label class="form-label">טמפרטורת יעד (°C)</label>
+                        <input type="number" id="cageTempInput" class="form-input" step="0.5" value="24.0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">לחות יעד (%)</label>
+                        <input type="number" id="cageHumidityInput" class="form-input" min="10" max="100" value="55">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label class="form-label">אזור מיקום בגן</label>
+                    <input type="text" id="cageZoneInput" class="form-input" placeholder="למשל: שדרה אפריקאית מזרחית">
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:12px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('cageModal')">ביטול</button>
+                    <button type="submit" class="btn btn-primary">שמור מתחם</button>
+                </div>
+            </form>
         </div>
     </div>
 

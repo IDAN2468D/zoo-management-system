@@ -129,5 +129,49 @@ class ModelTests {
         lion.addMedicalRecord(med);
         assertEquals(HealthStatus.UNDER_OBSERVATION, lion.getHealthStatus());
         assertEquals(1, lion.getMedicalHistory().size());
+
+        // Image URL test
+        lion.setImageUrl("images/simba.jpg");
+        assertEquals("images/simba.jpg", lion.getImageUrl());
+    }
+
+    @Test
+    @DisplayName("Should verify enhanced Cage climate and capacity properties")
+    void testEnhancedCageProperties() {
+        Cage cage = new Cage(10L, Species.FELINE);
+        cage.setName("Savanna Enclosure A");
+        cage.setCapacity(8);
+        cage.setTemperatureCelsius(26.5);
+        cage.setHumidityPercent(45.0);
+        cage.setLocationZone("East Zone");
+        cage.setStatus("ACTIVE");
+
+        assertEquals(10L, cage.getId());
+        assertEquals("Savanna Enclosure A", cage.getName());
+        assertEquals(8, cage.getCapacity());
+        assertEquals(26.5, cage.getTemperatureCelsius());
+        assertEquals(45.0, cage.getHumidityPercent());
+        assertEquals("East Zone", cage.getLocationZone());
+        assertEquals("ACTIVE", cage.getStatus());
+    }
+
+    @Test
+    @DisplayName("Should verify ZooTask creation, status progression, and fields")
+    void testZooTaskProperties() {
+        ZooTask task = new ZooTask("Morning Feeding", "Feed meat to lions", UserRole.KEEPER, "Maya Levi", "Simba", "HIGH", "Today 09:00");
+        task.setId(100L);
+
+        assertEquals(100L, task.getId());
+        assertEquals("Morning Feeding", task.getTitle());
+        assertEquals("Feed meat to lions", task.getDescription());
+        assertEquals(UserRole.KEEPER, task.getAssignedRole());
+        assertEquals("Maya Levi", task.getAssignedToName());
+        assertEquals("Simba", task.getAnimalName());
+        assertEquals("HIGH", task.getPriority());
+        assertEquals("PENDING", task.getStatus());
+        assertEquals("Today 09:00", task.getDueDate());
+
+        task.setStatus("COMPLETED");
+        assertEquals("COMPLETED", task.getStatus());
     }
 }

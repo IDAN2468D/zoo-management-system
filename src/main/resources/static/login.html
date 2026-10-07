@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>כניסה למערכת | מערכת ניהול חיות גן החיות</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="login-page-body">
+
+    <div class="login-wrapper">
+        <!-- Brand Header -->
+        <div class="login-brand">
+            <span class="login-brand-icon">🦁</span>
+            <h1 class="login-brand-title">מערכת ניהול חיות גן החיות</h1>
+            <p class="login-brand-subtitle">פורטל אימות מאובטח (Spring Security 6 RBAC)</p>
+        </div>
+
+        <!-- Alert Notification Box -->
+        <div class="login-alert" id="loginAlert">
+            <span class="login-alert-icon" id="loginAlertIcon">⚠️</span>
+            <span id="loginAlertText">הודעה</span>
+        </div>
+
+        <!-- Existing Session Banner (If already logged in) -->
+        <div class="quick-login-box" id="existingSessionBox" style="display: none; border-color: rgba(99,102,241,0.4); margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div>
+                    <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">
+                        👋 מחובר כרגע: <span id="existingUserName" style="color: var(--primary);"></span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);" id="existingUserRole">תפקיד במערכת</div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <a href="index.html" class="btn btn-primary btn-sm">
+                        <span>🏠</span> מעבר לדף הבית
+                    </a>
+                    <button type="button" class="btn btn-rose btn-sm" id="btnExistingLogout">
+                        <span>🚪</span> התנתק
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Auth Card -->
+        <div class="login-card">
+            <!-- Tabs -->
+            <div class="auth-tabs">
+                <button type="button" class="auth-tab-btn active" id="tabBtnLogin" onclick="switchTab('login')">
+                    🔑 התחברות למערכת
+                </button>
+                <button type="button" class="auth-tab-btn" id="tabBtnRegister" onclick="switchTab('register')">
+                    📝 הרשמת משתמש חדש
+                </button>
+            </div>
+
+            <!-- TAB 1: LOGIN -->
+            <div class="auth-tab-pane active" id="paneLogin">
+                <div class="quick-login-box">
+                    <span class="quick-login-label">⚡ התחברות מהירה (בלחיצה אחת):</span>
+                    <div class="quick-login-grid">
+                        <button type="button" class="btn-quick-login admin" onclick="quickFill('admin', 'admin123')">
+                            <span class="quick-icon">👑</span>
+                            <div class="quick-info">
+                                <strong>מנהל ראשי</strong>
+                                <small>admin</small>
+                            </div>
+                        </button>
+                        <button type="button" class="btn-quick-login vet" onclick="quickFill('vet', 'vet123')">
+                            <span class="quick-icon">🩺</span>
+                            <div class="quick-info">
+                                <strong>רופא וטרינר</strong>
+                                <small>vet</small>
+                            </div>
+                        </button>
+                        <button type="button" class="btn-quick-login keeper" onclick="quickFill('keeper', 'keeper123')">
+                            <span class="quick-icon">🥩</span>
+                            <div class="quick-info">
+                                <strong>מטפל חיות</strong>
+                                <small>keeper</small>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="auth-divider">
+                    <span>או התחבר עם שם משתמש וסיסמה</span>
+                </div>
+
+                <form id="loginForm">
+                    <div class="form-group" style="margin-bottom:16px;">
+                        <label class="form-label">שם משתמש *</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">👤</span>
+                            <input type="text" id="loginUsername" class="form-input" required placeholder="למשל: admin, vet, keeper" autocomplete="username">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:22px;">
+                        <label class="form-label">סיסמה *</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">🔒</span>
+                            <input type="password" id="loginPassword" class="form-input" required placeholder="הזן את סיסמתך" autocomplete="current-password">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block btn-lg" id="btnSubmitLogin">
+                        <span>🚀</span> התחבר ועבור לדף הבית
+                    </button>
+                </form>
+
+                <div class="auth-switch-prompt">
+                    אין לך עדיין חשבון במערכת? <a href="javascript:void(0)" onclick="switchTab('register')">הירשם עכשיו בחינם</a>
+                </div>
+            </div>
+
+            <!-- TAB 2: REGISTER -->
+            <div class="auth-tab-pane" id="paneRegister" style="display:none;">
+                <form id="registerForm">
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label class="form-label">שם מלא *</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">🏷️</span>
+                            <input type="text" id="regFullName" class="form-input" required placeholder="למשל: דניאל שלום" autocomplete="name">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label class="form-label">שם משתמש (באנגלית) *</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">👤</span>
+                            <input type="text" id="regUsername" class="form-input" required placeholder="למשל: daniel_vet" autocomplete="username">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:16px;">
+                        <label class="form-label">סיסמה (לפחות 4 תווים) *</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">🔒</span>
+                            <input type="password" id="regPassword" class="form-input" required minlength="4" placeholder="••••••••" autocomplete="new-password">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:22px;">
+                        <label class="form-label">בחר תפקיד והרשאה במערכת *</label>
+                        <div class="role-cards-grid">
+                            <label class="role-card-option">
+                                <input type="radio" name="regRole" value="KEEPER" checked>
+                                <div class="role-card-inner">
+                                    <span class="role-card-icon">🥩</span>
+                                    <div>
+                                        <div class="role-card-title">מטפל חיות (Keeper)</div>
+                                        <div class="role-card-desc">הרשאה להאכלת חיות, שינוי כלובים וצפייה בתיקים</div>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="role-card-option">
+                                <input type="radio" name="regRole" value="VET">
+                                <div class="role-card-inner">
+                                    <span class="role-card-icon">🩺</span>
+                                    <div>
+                                        <div class="role-card-title">רופא וטרינר (Veterinarian)</div>
+                                        <div class="role-card-desc">הרשאה לרישום בדיקות רפואיות ובידוד חיות</div>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="role-card-option">
+                                <input type="radio" name="regRole" value="ADMIN">
+                                <div class="role-card-inner">
+                                    <span class="role-card-icon">👑</span>
+                                    <div>
+                                        <div class="role-card-title">מנהל מערכת (Admin)</div>
+                                        <div class="role-card-desc">שליטה מלאה: הוספה, עריכה ומחיקת חיות, כלובים ועובדים</div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-emerald btn-block btn-lg" id="btnSubmitRegister">
+                        <span>✨</span> צור חשבון ועבור לדף הבית
+                    </button>
+                </form>
+
+                <div class="auth-switch-prompt">
+                    כבר יש לך חשבון קיים? <a href="javascript:void(0)" onclick="switchTab('login')">התחבר כאן</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Security Badges Footer -->
+        <div class="login-footer-badges">
+            <div class="security-badge">
+                <span>🛡️</span> Spring Security 6 RBAC
+            </div>
+            <div class="security-badge">
+                <span>🔒</span> BCrypt Password Hashing
+            </div>
+            <div class="security-badge">
+                <span>🐘</span> PostgreSQL Data Storage
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="login.js"></script>
+</body>
+</html>

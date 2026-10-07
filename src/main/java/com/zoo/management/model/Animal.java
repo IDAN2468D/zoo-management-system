@@ -1,33 +1,67 @@
 package com.zoo.management.model;
 
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+@Entity
+@Table(name = "animals")
 public class Animal {
-    private Long id;
-    private String name;
-    private Species species;
-    private SubSpecies subSpecies;
-    private HealthStatus healthStatus = HealthStatus.HEALTHY;
-    private Cage cage;
 
-    // Upgraded animal attributes
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Enumerated(EnumType.STRING)
+    private Species species;
+
+    @Enumerated(EnumType.STRING)
+    private SubSpecies subSpecies;
+
+    @Enumerated(EnumType.STRING)
+    private HealthStatus healthStatus = HealthStatus.HEALTHY;
+
+    @Enumerated(EnumType.STRING)
     private Gender gender = Gender.UNKNOWN;
+
     private Integer age;
     private Double weightKg;
+
+    @Enumerated(EnumType.STRING)
     private DietType dietType = DietType.OMNIVORE;
+
     private String favoriteFood;
     private String originCountry;
+
+    @Enumerated(EnumType.STRING)
     private ConservationStatus conservationStatus = ConservationStatus.LEAST_CONCERN;
+
     private String microchipId;
     private String feedingSchedule;
     private LocalDateTime lastFedTime;
+
+    @Column(length = 500)
+    private String imageUrl;
+
+    @Column(length = 1000)
     private String notes;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "cage_id")
+    private Cage cage;
+
+    @OneToMany(mappedBy = "animal", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OrderBy("timestamp DESC")
     private List<MedicalRecord> medicalHistory = new ArrayList<>();
+
+    @OneToMany(mappedBy = "animal", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OrderBy("timestamp DESC")
     private List<FeedingRecord> feedingHistory = new ArrayList<>();
 
     public Animal() {
@@ -194,6 +228,9 @@ public class Animal {
 
     public void setMedicalHistory(List<MedicalRecord> medicalHistory) {
         this.medicalHistory = medicalHistory != null ? medicalHistory : new ArrayList<>();
+        for (MedicalRecord record : this.medicalHistory) {
+            record.setAnimal(this);
+        }
     }
 
     public List<FeedingRecord> getFeedingHistory() {
@@ -202,12 +239,16 @@ public class Animal {
 
     public void setFeedingHistory(List<FeedingRecord> feedingHistory) {
         this.feedingHistory = feedingHistory != null ? feedingHistory : new ArrayList<>();
+        for (FeedingRecord record : this.feedingHistory) {
+            record.setAnimal(this);
+        }
     }
 
     public void addMedicalRecord(MedicalRecord record) {
         if (this.medicalHistory == null) {
             this.medicalHistory = new ArrayList<>();
         }
+        record.setAnimal(this);
         this.medicalHistory.add(0, record); // newest first
         if (record.getHealthStatus() != null) {
             this.healthStatus = record.getHealthStatus();
@@ -218,6 +259,7 @@ public class Animal {
         if (this.feedingHistory == null) {
             this.feedingHistory = new ArrayList<>();
         }
+        record.setAnimal(this);
         this.feedingHistory.add(0, record); // newest first
         this.lastFedTime = record.getTimestamp();
     }
@@ -231,6 +273,14 @@ public class Animal {
 
     public boolean isEndangered() {
         return conservationStatus != null && conservationStatus.isEndangered();
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     @Override

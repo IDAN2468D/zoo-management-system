@@ -5,25 +5,25 @@ import com.zoo.management.dto.FeedingRequest;
 import com.zoo.management.dto.MedicalRecordRequest;
 import com.zoo.management.exception.AnimalValidationException;
 import com.zoo.management.model.*;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTest
+@Transactional
 class ZooAnimalServiceTests {
 
+    @Autowired
     private ZooService zooService;
 
-    @BeforeEach
-    void setUp() {
-        zooService = new ZooService();
-    }
-
     @Test
-    @DisplayName("Should successfully load sample animals with rich attributes")
+    @DisplayName("Should successfully load sample animals with rich attributes from JPA")
     void testSampleAnimalsLoaded() {
         List<Animal> animals = zooService.getAllAnimals();
         assertFalse(animals.isEmpty());
@@ -41,7 +41,7 @@ class ZooAnimalServiceTests {
     }
 
     @Test
-    @DisplayName("Should feed animal and update lastFedTime and feeding history")
+    @DisplayName("Should feed animal and update lastFedTime and feeding history in DB")
     void testFeedAnimal() {
         Animal simba = zooService.searchAnimals("Simba").get(0);
         int initialFeedings = simba.getFeedingHistory().size();
@@ -56,7 +56,7 @@ class ZooAnimalServiceTests {
     }
 
     @Test
-    @DisplayName("Should record medical checkup and update animal health status")
+    @DisplayName("Should record medical checkup and update animal health status in DB")
     void testMedicalCheckup() {
         Animal simba = zooService.searchAnimals("Simba").get(0);
         int initialRecords = simba.getMedicalHistory().size();
@@ -76,7 +76,7 @@ class ZooAnimalServiceTests {
     }
 
     @Test
-    @DisplayName("Should quarantine animal and create quarantine medical log")
+    @DisplayName("Should quarantine animal and create quarantine medical log in DB")
     void testQuarantineAnimal() {
         Animal simba = zooService.searchAnimals("Simba").get(0);
         Animal quarantined = zooService.quarantineAnimal(simba.getId(), "חשד לשפעת", "ד\"ר שרה מילר");
