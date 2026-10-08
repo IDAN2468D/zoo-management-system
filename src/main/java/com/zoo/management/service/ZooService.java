@@ -28,19 +28,23 @@ public class ZooService {
     private final MedicalRecordRepository medicalRecordRepository;
     private final EmployeeRepository employeeRepository;
     private final VeterinarianRepository veterinarianRepository;
+    private final InventoryRepository inventoryRepository;
+
 
     public ZooService(AnimalRepository animalRepository,
                       CageRepository cageRepository,
                       FeedingRecordRepository feedingRecordRepository,
                       MedicalRecordRepository medicalRecordRepository,
                       EmployeeRepository employeeRepository,
-                      VeterinarianRepository veterinarianRepository) {
+                      VeterinarianRepository veterinarianRepository,
+                      InventoryRepository inventoryRepository) {
         this.animalRepository = animalRepository;
         this.cageRepository = cageRepository;
         this.feedingRecordRepository = feedingRecordRepository;
         this.medicalRecordRepository = medicalRecordRepository;
         this.employeeRepository = employeeRepository;
         this.veterinarianRepository = veterinarianRepository;
+        this.inventoryRepository = inventoryRepository;
     }
 
     // ==========================================
@@ -117,7 +121,8 @@ public class ZooService {
             if (updated.getDietType() != null) existing.setDietType(updated.getDietType());
             if (updated.getFavoriteFood() != null) existing.setFavoriteFood(updated.getFavoriteFood());
             if (updated.getOriginCountry() != null) existing.setOriginCountry(updated.getOriginCountry());
-            if (updated.getConservationStatus() != null) existing.setConservationStatus(updated.getConservationStatus());
+            if (updated.getConservationStatus() != null)
+                existing.setConservationStatus(updated.getConservationStatus());
             if (updated.getMicrochipId() != null) existing.setMicrochipId(updated.getMicrochipId());
             if (updated.getFeedingSchedule() != null) existing.setFeedingSchedule(updated.getFeedingSchedule());
             if (updated.getNotes() != null) existing.setNotes(updated.getNotes());
@@ -162,6 +167,8 @@ public class ZooService {
     // Animal Operations (האכלה, טיפול רפואי, בידוד, העברה)
     // ==========================================
     public Animal feedAnimal(Long id, FeedingRequest request) {
+
+
         Animal animal = animalRepository.findById(id)
                 .orElseThrow(() -> new AnimalNotFoundException(id));
 
@@ -170,6 +177,16 @@ public class ZooService {
                 : (animal.getFavoriteFood() != null ? animal.getFavoriteFood() : "מזון שגרתי");
 
         Double amount = request.getAmountKg() != null ? request.getAmountKg() : 1.0;
+
+        inventoryRepository.findByNameIgnoreCase(food).ifPresent(item -> {
+            item.deduct(amount);
+            inventoryRepository.save(item);
+            if (item.isLowStock()) {
+                log.warn("⚠️ [מלאי נמוך] פריט מזון '{}' ירד מתחת לסף המינימום! נותרו: {} {}",
+                        item.getName(), item.getQuantity(), item.getUnit());
+            }
+        });
+
         String fedBy = (request.getFedBy() != null && !request.getFedBy().isBlank()) ? request.getFedBy() : "מטפל תורן";
 
         FeedingRecord record = new FeedingRecord(LocalDateTime.now(), food, amount, fedBy, request.getNotes());
@@ -551,6 +568,52 @@ public class ZooService {
         if (veterinarianRepository.existsById(id)) {
             veterinarianRepository.deleteById(id);
             log.warn("🗑️  [ZOO-ACTION: מחיקת וטרינר] וטרינר ID: {} הוסר מהמערכת", id);
+            return true;
+        }
+        return false;
+    }
+
+    @Transactional(readOnly = true)
+    public List<InventoryItem> getAllInventory() {
+        return inventoryRepository.findAll();
+    }
+
+    public InventoryItem addOrUpdateInventory(InventoryItem item) {
+        return inventoryRepository.save(item);
+    }
+
+    public InventoryItem restockItem(Long id, Double amount) {
+        InventoryItem item = inventoryRepository.findById(id)
+                .orElseThrow(() -> new AnimalValidationException("פריט מלאי לא נמצא"));
+        item.addStock(amount);
+        return inventoryRepository.save(item);
+    }
+
+    // עריכת פריט מלאי
+    public Optional<InventoryItem> updateInventoryItem(Long id, InventoryItem updated) {
+        return inventoryRepository.findById(id).map(existing -> {
+            if (updated.getName() != null && !updated.getName().isBlank()) {
+                existing.setName(updated.getName().trim());
+            }
+            if (updated.getQuantity() != null) {
+                existing.setQuantity(updated.getQuantity());
+            }
+            if (updated.getMinThreshold() != null) {
+                existing.setMinThreshold(updated.getMinThreshold());
+            }
+            if (updated.getUnit() != null && !updated.getUnit().isBlank()) {
+                existing.setUnit(updated.getUnit().trim());
+            }
+            log.info("📦 [ZOO-ACTION: עדכון מלאי] עודכן פריט '{}' (ID: {})", existing.getName(), id);
+            return inventoryRepository.save(existing);
+        });
+    }
+
+    // מחיקת פריט מלאי
+    public boolean deleteInventoryItem(Long id) {
+        if (inventoryRepository.existsById(id)) {
+            inventoryRepository.deleteById(id);
+            log.warn("🗑️ [ZOO-ACTION: מחיקת מלאי] נמחק פריט מלאי מזהה: {}", id);
             return true;
         }
         return false;

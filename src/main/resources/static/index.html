@@ -102,6 +102,10 @@
                 <span>📋</span> משימות וסידור עבודה
                 <span class="nav-sub-badge" id="navTasksBadge" style="display:none;">0</span>
             </button>
+            <button type="button" class="nav-tab-btn" data-view="inventory" id="tabNavInventory">
+                <span>📦</span> ניהול מלאי ומזון
+                <span class="nav-sub-badge" id="navInventoryBadge" style="display:none;">0</span>
+            </button>
             <button type="button" class="nav-tab-btn" data-view="analytics" id="tabNavAnalytics">
                 <span>📊</span> דוחות ואנליטיקה
             </button>
@@ -255,6 +259,81 @@
 
             <div class="analytics-grid" id="analyticsGrid">
                 <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- ================= VIEW 5: INVENTORY ================= -->
+        <div id="viewInventory" class="app-view" style="display:none;">
+            <div class="view-header">
+                <div class="view-header-title">
+                    <h2>📦 ניהול מלאי מזון ואספקה</h2>
+                    <p>מעקב כמויות בזמן אמת, התראות חוסר ומלאי נמוך, חידוש אספקה ועריכת פריטים</p>
+                </div>
+                <div style="display:flex; gap:12px; align-items:center;">
+                    <button type="button" class="btn btn-secondary" onclick="loadInventory()">
+                        <span>🔄</span> רענון מלאי
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnOpenAddInventory" style="display:none;">
+                        <span>➕</span> הוספת פריט מלאי חדש
+                    </button>
+                </div>
+            </div>
+
+            <!-- Inventory Stats Grid -->
+            <section class="stats-grid inventory-stats-grid">
+                <div class="stat-card blue">
+                    <div class="stat-header">
+                        <span class="stat-title">סך הכל פריטי מלאי</span>
+                        <span class="stat-icon">📦</span>
+                    </div>
+                    <div class="stat-value" id="statInventoryTotal">-</div>
+                    <div class="stat-desc">פריטי מזון וציוד מנוהלים</div>
+                </div>
+
+                <div class="stat-card rose">
+                    <div class="stat-header">
+                        <span class="stat-title">התראות מלאי נמוך</span>
+                        <span class="stat-icon">🚨</span>
+                    </div>
+                    <div class="stat-value" id="statInventoryLow">-</div>
+                    <div class="stat-desc">מתחת לסף המינימום שהוגדר</div>
+                </div>
+
+                <div class="stat-card emerald">
+                    <div class="stat-header">
+                        <span class="stat-title">מלאי תקין</span>
+                        <span class="stat-icon">✅</span>
+                    </div>
+                    <div class="stat-value" id="statInventoryOk">-</div>
+                    <div class="stat-desc">כמות מספקת לצרכי הגן</div>
+                </div>
+
+                <div class="stat-card purple">
+                    <div class="stat-header">
+                        <span class="stat-title">סך כמות מזון מנוטרת</span>
+                        <span class="stat-icon">⚖️</span>
+                    </div>
+                    <div class="stat-value" id="statInventoryTotalQty">-</div>
+                    <div class="stat-desc">סך יחידות וק"ג במחסנים</div>
+                </div>
+            </section>
+
+            <!-- Inventory Controls Bar (Search & Filter) -->
+            <div class="inventory-controls-bar">
+                <div class="inventory-search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="inventorySearchInput" class="form-input" placeholder="חיפוש מהיר של פריט מלאי לפי שם...">
+                </div>
+                <div class="inventory-filter-group">
+                    <button type="button" class="inventory-filter-btn active" data-filter="ALL" onclick="filterInventory('ALL')">הכל</button>
+                    <button type="button" class="inventory-filter-btn filter-low" data-filter="LOW" onclick="filterInventory('LOW')">🚨 מלאי נמוך בלבד</button>
+                    <button type="button" class="inventory-filter-btn" data-filter="NORMAL" onclick="filterInventory('NORMAL')">✅ מלאי תקין</button>
+                </div>
+            </div>
+
+            <!-- Inventory Items Grid -->
+            <div class="inventory-grid" id="inventoryListGrid">
+                <!-- Populated dynamically via renderInventory() -->
             </div>
         </div>
 
@@ -576,6 +655,77 @@
                 <div style="display:flex; justify-content:flex-end; gap:12px;">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('cageModal')">ביטול</button>
                     <button type="submit" class="btn btn-primary">שמור מתחם</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add / Edit Inventory Item -->
+    <div class="modal-overlay" id="inventoryModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 id="inventoryModalTitle">➕ הוספת פריט מלאי חדש</h2>
+                <button class="modal-close" onclick="closeModal('inventoryModal')">&times;</button>
+            </div>
+            <form id="inventoryForm">
+                <input type="hidden" id="inventoryItemId">
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label">שם פריט המלאי * (ייחודי)</label>
+                    <input type="text" id="inventoryNameInput" class="form-input" required placeholder="למשל: בשר בקר טרי, חציר אספסת, דגים קפואים">
+                </div>
+                <div class="form-grid" style="margin-bottom:14px;">
+                    <div class="form-group">
+                        <label class="form-label">כמות ראשונית במלאי *</label>
+                        <input type="number" id="inventoryQuantityInput" class="form-input" step="0.1" min="0" required placeholder="למשל: 100">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">סף מינימום להתראה *</label>
+                        <input type="number" id="inventoryMinThresholdInput" class="form-input" step="0.1" min="0" required placeholder="למשל: 30">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label class="form-label">יחידת מידה *</label>
+                    <select id="inventoryUnitInput" class="form-select" required>
+                        <option value='ק"ג' selected>ק"ג (קילוגרמים)</option>
+                        <option value="שקים">שקים</option>
+                        <option value="ארגזים">ארגזים</option>
+                        <option value="יחידות">יחידות</option>
+                        <option value="ליטר">ליטר</option>
+                    </select>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:12px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('inventoryModal')">ביטול</button>
+                    <button type="submit" class="btn btn-primary" id="inventorySubmitBtn">שמור פריט מלאי</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Quick Restock -->
+    <div class="modal-overlay" id="restockModal">
+        <div class="modal-content" style="max-width: 480px;">
+            <div class="modal-header">
+                <h2 id="restockModalTitle">📦 חידוש מלאי אספקה</h2>
+                <button class="modal-close" onclick="closeModal('restockModal')">&times;</button>
+            </div>
+            <form id="restockForm">
+                <input type="hidden" id="restockItemId">
+                <div class="restock-item-preview" id="restockItemPreview">
+                    <!-- Loaded dynamically -->
+                </div>
+                <div class="quick-amount-buttons" style="display:flex; gap:8px; margin-bottom:16px;">
+                    <button type="button" class="btn-quick-amount" onclick="setRestockAmount(10)">+10</button>
+                    <button type="button" class="btn-quick-amount" onclick="setRestockAmount(25)">+25</button>
+                    <button type="button" class="btn-quick-amount" onclick="setRestockAmount(50)">+50</button>
+                    <button type="button" class="btn-quick-amount" onclick="setRestockAmount(100)">+100</button>
+                </div>
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label class="form-label">כמות לחידוש והוספה *</label>
+                    <input type="number" id="restockAmountInput" class="form-input" step="0.1" min="0.1" required value="20" placeholder="הכנס כמות...">
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:12px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('restockModal')">ביטול</button>
+                    <button type="submit" class="btn btn-emerald" id="restockSubmitBtn">הוסף למלאי עכשיו</button>
                 </div>
             </form>
         </div>

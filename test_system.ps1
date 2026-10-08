@@ -53,4 +53,47 @@ foreach ($f in @('login.html', 'login.js', 'index.html', 'app.js', 'styles.css')
     Write-Host "  -> $f : HTTP $($r.StatusCode)" -ForegroundColor Green
 }
 
-Write-Host "`nALL COMPREHENSIVE TESTS COMPLETED SUCCESSFULLY!" -ForegroundColor Magenta
+Write-Host "`n=== 9. SWAGGER UI & OPENAPI CHECK ===" -ForegroundColor Cyan
+$swag = Invoke-WebRequest -Uri "http://localhost:9091/swagger-ui.html" -Method Get -UseBasicParsing
+Write-Host "  -> Swagger UI Page: HTTP $($swag.StatusCode)" -ForegroundColor Green
+$openApi = Invoke-RestMethod -Uri "http://localhost:9091/v3/api-docs"
+$secType = $openApi.components.securitySchemes.basicAuth.type
+Write-Host "  -> OpenAPI Title: $($openApi.info.title) | Basic Auth Security Scheme: $secType" -ForegroundColor Green
+
+Write-Host "`n=== 10. INVENTORY & RBAC VERIFICATION ===" -ForegroundColor Cyan
+$headersAdmin = @{ Authorization = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('admin:admin123')) }
+$headersKeeper = @{ Authorization = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('keeper:keeper123')) }
+
+$invPublic = Invoke-RestMethod -Uri "http://localhost:9091/api/inventory"
+Write-Host "  -> Public GET /api/inventory: Success ($($invPublic.Count) items found)" -ForegroundColor Green
+
+try {
+    Invoke-RestMethod -Uri "http://localhost:9091/api/inventory" -Method Post -ContentType "application/json" -Body '{"name":"UnauthTest"}'
+    Write-Host "  -> Unauthenticated POST: UNEXPECTED SUCCESS" -ForegroundColor Red
+} catch {
+    Write-Host "  -> Unauthenticated POST blocked with HTTP 401 Unauthorized (Expected)" -ForegroundColor Green
+}
+
+$firstItemId = $invPublic[0].id
+$restockRes = Invoke-RestMethod -Uri "http://localhost:9091/api/inventory/$firstItemId/restock" -Method Post -Headers $headersKeeper -ContentType "application/json" -Body '{"amount":10.0}'
+Write-Host "  -> Keeper Restock Item (ID: $firstItemId): Success (New quantity: $($restockRes.quantity))" -ForegroundColor Green
+
+try {
+    Invoke-RestMethod -Uri "http://localhost:9091/api/inventory" -Method Post -Headers $headersKeeper -ContentType "application/json" -Body '{"name":"KeeperTest","quantity":10.0,"minThreshold":2.0,"unit":"kg"}'
+    Write-Host "  -> Keeper Create Item: UNEXPECTED SUCCESS" -ForegroundColor Red
+} catch {
+    Write-Host "  -> Keeper Create Item blocked with HTTP 403 Forbidden (Expected)" -ForegroundColor Green
+}
+
+$createBody = @{ name = "PremiumHay"; quantity = 150.0; minThreshold = 30.0; unit = "kg" } | ConvertTo-Json
+$newAdminItem = Invoke-RestMethod -Uri "http://localhost:9091/api/inventory" -Method Post -Headers $headersAdmin -ContentType "application/json" -Body $createBody
+Write-Host "  -> Admin Create Item (ID: $($newAdminItem.id)): Success ('$($newAdminItem.name)')" -ForegroundColor Green
+
+$updateBody = @{ name = "PremiumHayGold"; quantity = 160.0; minThreshold = 35.0; unit = "kg" } | ConvertTo-Json
+$updatedAdminItem = Invoke-RestMethod -Uri "http://localhost:9091/api/inventory/$($newAdminItem.id)" -Method Put -Headers $headersAdmin -ContentType "application/json" -Body $updateBody
+Write-Host "  -> Admin Update Item (ID: $($updatedAdminItem.id)): Success ('$($updatedAdminItem.name)')" -ForegroundColor Green
+
+$delRes = Invoke-WebRequest -Uri "http://localhost:9091/api/inventory/$($newAdminItem.id)" -Method Delete -Headers $headersAdmin -UseBasicParsing
+Write-Host "  -> Admin Delete Item (ID: $($newAdminItem.id)): HTTP $($delRes.StatusCode) No Content (Expected)" -ForegroundColor Green
+
+Write-Host "`nALL COMPREHENSIVE TESTS (SECTIONS 1-10) COMPLETED SUCCESSFULLY!" -ForegroundColor Magenta

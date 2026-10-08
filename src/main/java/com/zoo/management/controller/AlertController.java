@@ -16,11 +16,13 @@ public class AlertController {
     private final AnimalRepository animalRepository;
     private final CageRepository cageRepository;
     private final ZooTaskRepository taskRepository;
+    private final InventoryRepository inventoryRepository;
 
-    public AlertController(AnimalRepository animalRepository, CageRepository cageRepository, ZooTaskRepository taskRepository) {
+    public AlertController(AnimalRepository animalRepository, CageRepository cageRepository, ZooTaskRepository taskRepository, InventoryRepository inventoryRepository) {
         this.animalRepository = animalRepository;
         this.cageRepository = cageRepository;
         this.taskRepository = taskRepository;
+        this.inventoryRepository = inventoryRepository;
     }
 
     @GetMapping
@@ -168,6 +170,22 @@ public class AlertController {
             int weightB = "CRITICAL".equals(typeB) ? 3 : "WARNING".equals(typeB) ? 2 : 1;
             return Integer.compare(weightB, weightA);
         });
+
+        // בתוך מתודת getActiveAlerts():
+        List<InventoryItem> lowStockItems = inventoryRepository.findLowStockItems();
+        for (InventoryItem item : lowStockItems) {
+            warningCount++;
+            Map<String, Object> alert = new HashMap<>();
+            alert.put("id", "inv-" + item.getId());
+            alert.put("type", "WARNING");
+            alert.put("category", "INVENTORY");
+            alert.put("icon", "📦");
+            alert.put("title", "מלאי נמוך: " + item.getName());
+            alert.put("message", "נותרו " + item.getQuantity() + " " + item.getUnit() + " בלבד (סף מינימום: " + item.getMinThreshold() + ")");
+            alert.put("actionType", "RESTOCK");
+            alert.put("actionText", "חידוש מלאי");
+            alerts.add(alert);
+        }
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("totalAlerts", alerts.size());

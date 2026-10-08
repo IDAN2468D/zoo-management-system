@@ -23,6 +23,7 @@ public class ZooDataInitializer implements CommandLineRunner {
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ZooTaskRepository taskRepository;
+    private final InventoryRepository inventoryRepository;
 
     public ZooDataInitializer(CageRepository cageRepository,
                               AnimalRepository animalRepository,
@@ -30,7 +31,7 @@ public class ZooDataInitializer implements CommandLineRunner {
                               VeterinarianRepository veterinarianRepository,
                               AppUserRepository userRepository,
                               PasswordEncoder passwordEncoder,
-                              ZooTaskRepository taskRepository) {
+                              ZooTaskRepository taskRepository, InventoryRepository inventoryRepository) {
         this.cageRepository = cageRepository;
         this.animalRepository = animalRepository;
         this.employeeRepository = employeeRepository;
@@ -38,6 +39,7 @@ public class ZooDataInitializer implements CommandLineRunner {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.taskRepository = taskRepository;
+        this.inventoryRepository = inventoryRepository;
     }
 
     @Override
@@ -61,6 +63,20 @@ public class ZooDataInitializer implements CommandLineRunner {
             taskRepository.save(new ZooTask("שקילת פנדה פו ומעקב צריכת במבוק", "שקילה במשטח הדיגיטלי ותיעוד ביומן המעקב", UserRole.VET, "ד\"ר רון כץ", "Po", "LOW", "מחר ב-10:00"));
             taskRepository.save(new ZooTask("ביקורת בטיחות מקיפה בכלובי הקופים והפילים", "בדיקת תקינות מנעולים, גידור חשמלי ומצלמות לילה", UserRole.ADMIN, "דוד כהן", "George", "HIGH", "סוף השבוע"));
             log.info("✅ 5 משימות עבודה נוצרו בהצלחה בטבלת zoo_tasks!");
+        }
+
+        // 1.2 אתחול פריטי מלאי ומזון
+        if (inventoryRepository.count() == 0) {
+            log.info("📦 מאתחל פריטי מלאי ומזון ב-inventory_items...");
+            inventoryRepository.save(new InventoryItem("בשר בקר טרי", 120.0, 30.0, "ק\"ג"));
+            inventoryRepository.save(new InventoryItem("בשר עוף ודגים", 85.0, 25.0, "ק\"ג"));
+            inventoryRepository.save(new InventoryItem("במבוק טרי", 45.0, 20.0, "ק\"ג"));
+            inventoryRepository.save(new InventoryItem("דגים ופירות ים", 90.0, 30.0, "ק\"ג"));
+            inventoryRepository.save(new InventoryItem("חציר וענפים", 250.0, 60.0, "ק\"ג"));
+            inventoryRepository.save(new InventoryItem("פירות וירקות טריים", 70.0, 20.0, "ק\"ג"));
+            inventoryRepository.save(new InventoryItem("זרעים ואגוזים לציפורים", 35.0, 10.0, "ק\"ג"));
+            inventoryRepository.save(new InventoryItem("תוספי תזונה וויטמינים", 12.0, 15.0, "ק\"ג"));
+            log.info("✅ 8 פריטי מלאי ומזון נוצרו בהצלחה בטבלת inventory_items!");
         }
 
         // 2. אתחול נתוני חיות וכלובים

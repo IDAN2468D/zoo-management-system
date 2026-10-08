@@ -54,6 +54,10 @@ public class SecurityConfig {
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/health", "/api/health", "/error").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
+
+                        // כאן מוסיפים את הנתיבים של Swagger ו-OpenAPI:
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+
                         .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
 
                         // 2. מטפלים ומנהלים: האכלת חיות והעברות כלוב
@@ -69,6 +73,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/tasks").hasAnyRole("KEEPER", "VET", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/tasks/**").hasAnyRole("KEEPER", "VET", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/tasks/**").hasRole("ADMIN")
+
+                        // 3.2 ניהול מלאי ומזון: חידוש מלאי למטפלים ומנהלים, ניהול מלא למנהלים
+                        .requestMatchers(HttpMethod.POST, "/api/inventory/*/restock").hasAnyRole("KEEPER", "ADMIN")
+                        .requestMatchers("/api/inventory", "/api/inventory/**").hasRole("ADMIN")
 
                         // 4. מנהלים בלבד: הוספה, עריכה ומחיקה של חיות
                         .requestMatchers(HttpMethod.POST, "/api/animals").hasRole("ADMIN")

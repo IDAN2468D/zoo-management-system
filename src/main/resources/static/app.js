@@ -131,6 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadAnimals();
     await loadAlerts();
     await loadTasks();
+    await loadInventory();
 });
 
 // Check Session from localStorage on startup
@@ -286,6 +287,17 @@ function updateAuthUI() {
     } else {
         if (guestControls) guestControls.style.display = 'inline-flex';
         if (userControls) userControls.style.display = 'none';
+    }
+
+    // Role-dependent controls
+    const btnOpenAddInventory = document.getElementById('btnOpenAddInventory');
+    if (btnOpenAddInventory) {
+        btnOpenAddInventory.style.display = currentUser.role === 'ADMIN' ? 'inline-flex' : 'none';
+    }
+
+    // Re-render inventory actions if inventory is loaded
+    if (typeof allInventory !== 'undefined' && allInventory.length > 0) {
+        renderInventory();
     }
 }
 
@@ -1140,9 +1152,30 @@ function initNavigationAndNewFeatures() {
     if (taskForm) {
         taskForm.addEventListener('submit', handleTaskSubmit);
     }
+
+    // Inventory Event Listeners
+    const btnOpenAddInventory = document.getElementById('btnOpenAddInventory');
+    if (btnOpenAddInventory) {
+        btnOpenAddInventory.addEventListener('click', openAddInventoryModal);
+    }
+
+    const inventoryForm = document.getElementById('inventoryForm');
+    if (inventoryForm) {
+        inventoryForm.addEventListener('submit', handleInventorySubmit);
+    }
+
+    const restockForm = document.getElementById('restockForm');
+    if (restockForm) {
+        restockForm.addEventListener('submit', handleRestockSubmit);
+    }
+
+    const inventorySearchInput = document.getElementById('inventorySearchInput');
+    if (inventorySearchInput) {
+        inventorySearchInput.addEventListener('input', renderInventory);
+    }
 }
 
-// Switch between views (Animals, Cages, Tasks, Analytics)
+// Switch between views (Animals, Cages, Tasks, Inventory, Analytics)
 function switchView(viewName) {
     document.querySelectorAll('.nav-tab-btn').forEach(b => {
         b.classList.toggle('active', b.dataset.view === viewName);
@@ -1163,6 +1196,8 @@ function switchView(viewName) {
         loadCagesView();
     } else if (viewName === 'tasks') {
         loadTasks();
+    } else if (viewName === 'inventory') {
+        loadInventory();
     } else if (viewName === 'analytics') {
         loadAnalytics();
     } else if (viewName === 'animals') {
@@ -1804,4 +1839,349 @@ window.updateTaskStatus = updateTaskStatus;
 window.deleteTask = deleteTask;
 window.openAddAnimalInCage = openAddAnimalInCage;
 window.exportAnimalsToCSV = exportAnimalsToCSV;
+
+// ==========================================
+// 6. Inventory & Food Management Logic (חדש)
+// ==========================================
+let allInventory = [];
+let currentInventoryFilter = 'ALL';
+
+async function loadInventory() {
+    try {
+        const res = await apiFetch(`${API_BASE}/inventory`);
+        if (!res.ok) return;
+
+        const items = await res.json();
+        allInventory = items || [];
+
+        // Update stats
+        const totalCount = allInventory.length;
+        const lowItems = allInventory.filter(item => item.lowStock || (item.quantity != null && item.minThreshold != null && item.quantity <= item.minThreshold));
+        const lowCount = lowItems.length;
+        const okCount = totalCount - lowCount;
+        const totalQty = allInventory.reduce((sum, item) => sum + (item.quantity || 0), 0);
+
+        const elTotal = document.getElementById('statInventoryTotal');
+        const elLow = document.getElementById('statInventoryLow');
+        const elOk = document.getElementById('statInventoryOk');
+        const elTotalQty = document.getElementById('statInventoryTotalQty');
+
+        if (elTotal) elTotal.textContent = totalCount;
+        if (elLow) elLow.textContent = lowCount;
+        if (elOk) elOk.textContent = okCount;
+        if (elTotalQty) elTotalQty.textContent = `${totalQty.toFixed(1)} יח'/ק"ג`;
+
+        // Update Nav Badge
+        const navBadge = document.getElementById('navInventoryBadge');
+        if (navBadge) {
+            if (lowCount > 0) {
+                navBadge.textContent = lowCount;
+                navBadge.style.display = 'inline-block';
+                navBadge.style.background = 'var(--accent-rose)';
+            } else {
+                navBadge.style.display = 'none';
+            }
+        }
+
+        renderInventory();
+    } catch (e) {
+        console.warn('Error loading inventory:', e);
+    }
+}
+
+function filterInventory(filter) {
+    currentInventoryFilter = filter;
+    document.querySelectorAll('.inventory-filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === filter);
+    });
+    renderInventory();
+}
+
+function getInventoryIcon(name) {
+    if (!name) return '📦';
+    const n = name.toLowerCase();
+    if (n.includes('בשר') || n.includes('עוף') || n.includes('meat') || n.includes('beef')) return '🥩';
+    if (n.includes('דג') || n.includes('ים') || n.includes('fish')) return '🐟';
+    if (n.includes('במבוק') || n.includes('צמח') || n.includes('bamboo')) return '🎋';
+    if (n.includes('חציר') || n.includes('אספסת') || n.includes('עשב') || n.includes('hay')) return '🌾';
+    if (n.includes('פרי') || n.includes('ירק') || n.includes('גזר') || n.includes('fruit')) return '🍎';
+    if (n.includes('זרע') || n.includes('אגוז') || n.includes('seed')) return '🥜';
+    if (n.includes('ויטמין') || n.includes('תרופ') || n.includes('תוסף')) return '💊';
+    return '📦';
+}
+
+function renderInventory() {
+    const grid = document.getElementById('inventoryListGrid');
+    if (!grid) return;
+
+    const searchTerm = (document.getElementById('inventorySearchInput')?.value || '').trim().toLowerCase();
+
+    let filtered = allInventory;
+
+    // Filter by low/normal status
+    if (currentInventoryFilter === 'LOW') {
+        filtered = filtered.filter(i => i.lowStock || (i.quantity != null && i.minThreshold != null && i.quantity <= i.minThreshold));
+    } else if (currentInventoryFilter === 'NORMAL') {
+        filtered = filtered.filter(i => !(i.lowStock || (i.quantity != null && i.minThreshold != null && i.quantity <= i.minThreshold)));
+    }
+
+    // Filter by search term
+    if (searchTerm) {
+        filtered = filtered.filter(i => (i.name || '').toLowerCase().includes(searchTerm) || (i.unit || '').toLowerCase().includes(searchTerm));
+    }
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-muted);">
+                <div style="font-size:3rem; margin-bottom:12px;">📦</div>
+                <div style="font-size:1.15rem; font-weight:700; color:var(--text-primary);">לא נמצאו פריטי מלאי תואמים</div>
+                <p style="margin-top:6px;">נסה לשנות את הסינון או החיפוש, או הוסף פריט מלאי חדש.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const canRestock = currentUser.role === 'ADMIN' || currentUser.role === 'KEEPER';
+    const canManage = currentUser.role === 'ADMIN';
+
+    grid.innerHTML = filtered.map(item => {
+        const isLow = item.lowStock || (item.quantity != null && item.minThreshold != null && item.quantity <= item.minThreshold);
+        const icon = getInventoryIcon(item.name);
+        const qty = item.quantity != null ? item.quantity : 0;
+        const min = item.minThreshold != null ? item.minThreshold : 0;
+        const unit = escapeHtml(item.unit || 'ק"ג');
+
+        // Progress calculation
+        const targetMax = Math.max(min * 2.5, qty * 1.1, 10);
+        const pct = Math.min(100, Math.max(4, Math.round((qty / targetMax) * 100)));
+
+        let barClass = 'safe';
+        if (isLow) barClass = 'danger';
+        else if (qty <= min * 1.3) barClass = 'warning';
+
+        // Last restock formatted
+        let lastRestockedText = 'לא תועד';
+        if (item.lastRestocked) {
+            try {
+                const d = new Date(item.lastRestocked);
+                lastRestockedText = `${d.toLocaleDateString('he-IL')} ${d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}`;
+            } catch (err) {}
+        }
+
+        // Action buttons
+        let actionsHtml = '';
+        if (canRestock) {
+            actionsHtml += `<button type="button" class="btn btn-emerald btn-sm" onclick="openRestockModal(${item.id})">📦 חידוש מלאי</button>`;
+        }
+        if (canManage) {
+            actionsHtml += `<button type="button" class="btn btn-primary btn-sm" onclick="openEditInventoryModal(${item.id})">✏️ עריכה</button>`;
+            actionsHtml += `<button type="button" class="btn btn-rose btn-sm" onclick="deleteInventoryItem(${item.id}, '${escapeHtml(item.name)}')" title="מחיקת פריט">🗑️</button>`;
+        }
+        if (!canRestock && !canManage) {
+            actionsHtml += `<span style="font-size:0.8rem; color:var(--text-muted); font-style:italic;">צפייה בלבד (נדרשת הרשאת מטפל/מנהל)</span>`;
+        }
+
+        return `
+            <div class="inventory-card ${isLow ? 'low-stock' : ''}" id="inventory-card-${item.id}">
+                <div class="inventory-card-top">
+                    <div class="inventory-card-title-wrap">
+                        <div class="inventory-card-icon">${icon}</div>
+                        <div>
+                            <div class="inventory-card-title">${escapeHtml(item.name)}</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">מזהה פריט: #${item.id}</div>
+                        </div>
+                    </div>
+                    <span class="inventory-badge ${isLow ? 'low' : 'safe'}">
+                        ${isLow ? '🚨 מלאי נמוך!' : '✅ מלאי תקין'}
+                    </span>
+                </div>
+
+                <div class="stock-meter-box">
+                    <div class="stock-meter-header">
+                        <span>כמות במחסן</span>
+                        <span class="stock-meter-values">${qty.toFixed(1)} / ${min.toFixed(1)} ${unit}</span>
+                    </div>
+                    <div class="stock-meter-bar-bg">
+                        <div class="stock-meter-bar-fill ${barClass}" style="width: ${pct}%"></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+                        <span>סף אזהרה: ${min.toFixed(1)} ${unit}</span>
+                        <span>${pct}% מהיעד המומלץ</span>
+                    </div>
+                </div>
+
+                <div class="inventory-meta-row">
+                    <span>🕒 עודכן: ${lastRestockedText}</span>
+                    <span>יחידה: <strong>${unit}</strong></span>
+                </div>
+
+                <div class="inventory-actions-row">
+                    ${actionsHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function openAddInventoryModal() {
+    document.getElementById('inventoryForm').reset();
+    document.getElementById('inventoryItemId').value = '';
+    document.getElementById('inventoryModalTitle').textContent = '➕ הוספת פריט מלאי חדש';
+    document.getElementById('inventorySubmitBtn').textContent = 'הוסף פריט למלאי';
+    openModal('inventoryModal');
+}
+
+function openEditInventoryModal(id) {
+    const item = allInventory.find(i => i.id === id);
+    if (!item) return;
+
+    document.getElementById('inventoryItemId').value = item.id;
+    document.getElementById('inventoryNameInput').value = item.name || '';
+    document.getElementById('inventoryQuantityInput').value = item.quantity != null ? item.quantity : '';
+    document.getElementById('inventoryMinThresholdInput').value = item.minThreshold != null ? item.minThreshold : '';
+    document.getElementById('inventoryUnitInput').value = item.unit || 'ק"ג';
+
+    document.getElementById('inventoryModalTitle').textContent = `✏️ עריכת פריט מלאי: ${item.name}`;
+    document.getElementById('inventorySubmitBtn').textContent = 'שמור שינויים';
+    openModal('inventoryModal');
+}
+
+async function handleInventorySubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById('inventoryItemId').value;
+    const isEdit = !!id;
+
+    const payload = {
+        name: document.getElementById('inventoryNameInput').value.trim(),
+        quantity: parseFloat(document.getElementById('inventoryQuantityInput').value),
+        minThreshold: parseFloat(document.getElementById('inventoryMinThresholdInput').value),
+        unit: document.getElementById('inventoryUnitInput').value
+    };
+
+    try {
+        const url = isEdit ? `${API_BASE}/inventory/${id}` : `${API_BASE}/inventory`;
+        const method = isEdit ? 'PUT' : 'POST';
+        const res = await apiFetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            closeModal('inventoryModal');
+            showToast(isEdit ? `פריט המלאי "${payload.name}" עודכן בהצלחה!` : `פריט המלאי "${payload.name}" נוסף בהצלחה!`, 'success');
+            await loadInventory();
+            return;
+        }
+
+        if (res.status === 409) {
+            showToast('⚠️ שגיאה: כבר קיים פריט מלאי בשם זה במערכת', 'error');
+        } else if (res.status !== 401 && res.status !== 403) {
+            const errData = await res.json().catch(() => ({}));
+            showToast(errData.message || 'שגיאה בשמירת פריט המלאי', 'error');
+        }
+    } catch (err) {
+        showToast('שגיאה בתקשורת עם השרת: ' + err.message, 'error');
+    }
+}
+
+function openRestockModal(id) {
+    const item = allInventory.find(i => i.id === id);
+    if (!item) return;
+
+    document.getElementById('restockItemId').value = item.id;
+    document.getElementById('restockAmountInput').value = '20';
+
+    const icon = getInventoryIcon(item.name);
+    const preview = document.getElementById('restockItemPreview');
+    if (preview) {
+        preview.innerHTML = `
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:2rem;">${icon}</span>
+                <div>
+                    <strong style="color:var(--text-primary); font-size:1.05rem;">${escapeHtml(item.name)}</strong>
+                    <div style="font-size:0.8rem; color:var(--text-muted);">כמות קיימת במחסן: <span style="color:var(--primary); font-weight:700;">${(item.quantity || 0).toFixed(1)} ${escapeHtml(item.unit || 'ק"ג')}</span></div>
+                </div>
+            </div>
+            <div style="text-align:left;">
+                <span style="font-size:0.8rem; color:var(--text-secondary);">סף התראה: ${item.minThreshold} ${escapeHtml(item.unit || 'ק"ג')}</span>
+            </div>
+        `;
+    }
+
+    openModal('restockModal');
+}
+
+function setRestockAmount(val) {
+    const input = document.getElementById('restockAmountInput');
+    if (input) input.value = val;
+}
+
+async function handleRestockSubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById('restockItemId').value;
+    const amount = parseFloat(document.getElementById('restockAmountInput').value);
+
+    if (!id || isNaN(amount) || amount <= 0) {
+        showToast('נא להזין כמות חיובית ותקינה לחידוש', 'warning');
+        return;
+    }
+
+    try {
+        const res = await apiFetch(`${API_BASE}/inventory/${id}/restock`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount })
+        });
+
+        if (res.ok) {
+            const updated = await res.json();
+            closeModal('restockModal');
+            showToast(`📦 המלאי של "${updated.name}" חודש בהצלחה! כמות עדכנית: ${updated.quantity} ${updated.unit}`, 'success');
+            await loadInventory();
+            return;
+        }
+
+        if (res.status !== 401 && res.status !== 403) {
+            const errData = await res.json().catch(() => ({}));
+            showToast(errData.message || 'שגיאה בחידוש המלאי', 'error');
+        }
+    } catch (err) {
+        showToast('שגיאה בתקשורת עם השרת: ' + err.message, 'error');
+    }
+}
+
+async function deleteInventoryItem(id, name) {
+    if (!confirm(`האם אתה בטוח שברצונך למחוק את פריט המלאי "${name}"?`)) {
+        return;
+    }
+
+    try {
+        const res = await apiFetch(`${API_BASE}/inventory/${id}`, {
+            method: 'DELETE'
+        });
+
+        if (res.ok || res.status === 204) {
+            showToast(`🗑️ הפריט "${name}" נמחק בהצלחה מהמלאי`, 'success');
+            await loadInventory();
+            return;
+        }
+
+        if (res.status !== 401 && res.status !== 403) {
+            showToast('שגיאה במחיקת פריט המלאי', 'error');
+        }
+    } catch (err) {
+        showToast('שגיאה בתקשורת: ' + err.message, 'error');
+    }
+}
+
+// Global window bindings for Inventory
+window.loadInventory = loadInventory;
+window.filterInventory = filterInventory;
+window.openAddInventoryModal = openAddInventoryModal;
+window.openEditInventoryModal = openEditInventoryModal;
+window.openRestockModal = openRestockModal;
+window.setRestockAmount = setRestockAmount;
+window.deleteInventoryItem = deleteInventoryItem;
+
 
